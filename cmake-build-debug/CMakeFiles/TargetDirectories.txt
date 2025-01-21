@@ -1,0 +1,3 @@
+/Users/muhammadbenoun/CLionProjects/XOXO/cmake-build-debug/CMakeFiles/XOXO.dir
+/Users/muhammadbenoun/CLionProjects/XOXO/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/muhammadbenoun/CLionProjects/XOXO/cmake-build-debug/CMakeFiles/rebuild_cache.dir
