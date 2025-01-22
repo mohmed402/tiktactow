@@ -2,6 +2,11 @@
 #include <iostream>
 #include <vector>
 
+
+#include <SFML/Graphics.hpp>
+#include <iostream>
+#include <vector>
+
 const int WINDOW_SIZE = 600;
 const int GRID_SIZE = 3;
 const float CELL_SIZE = WINDOW_SIZE / GRID_SIZE;
@@ -9,21 +14,74 @@ const float CELL_SIZE = WINDOW_SIZE / GRID_SIZE;
 enum class Player { None, X, O };
 
 class Game {
+
 private:
     sf::RenderWindow window;
     std::vector<std::vector<Player>> board;
     Player currentPlayer;
-    bool gameOver;
+    bool gameOver, gameStarted;
+    // bool gameStarted;
+    sf::Texture xTexture, oTexture;
+    // sf::Texture oTexture;
+    sf::Sprite xSprite, oSprite;
+    // sf::Sprite oSprite;
+    sf::RectangleShape restartButton;
+    sf::Text restartButtonText;
+
 
 public:
-    Game() : window(sf::VideoMode(WINDOW_SIZE, WINDOW_SIZE), "Tic-Tac-Toe"), board(GRID_SIZE, std::vector<Player>(GRID_SIZE, Player::None)), currentPlayer(Player::X), gameOver(false) {}
+     Game()
+        : window(sf::VideoMode(WINDOW_SIZE, WINDOW_SIZE), "Tic-Tac-Toe"),
+          board(GRID_SIZE, std::vector<Player>(GRID_SIZE, Player::None)),
+          currentPlayer(Player::X),
+          gameOver(false),
+          gameStarted(false)
+    {
+        // Load textures and font in the constructor
+        if (!xTexture.loadFromFile("/Users/muhammadbenoun/CLionProjects/XOXO/Recourse/xIcon.png")) {
+            std::cerr << "Failed to load X image!" << std::endl;
+        }
+        if (!oTexture.loadFromFile("/Users/muhammadbenoun/CLionProjects/XOXO/Recourse/oIcon.png")) {
+            std::cerr << "Failed to load O image!" << std::endl;
+        }
+
+        sf::Font font;
+        if (!font.loadFromFile("/Users/muhammadbenoun/CLionProjects/XOXO/Recourse/ARIAL.TTF")) {
+            std::cerr << "Failed to load font!" << std::endl;
+        }
+
+        xSprite.setTexture(xTexture);
+        oSprite.setTexture(oTexture);
+
+        // Adjust the scaling to make the images smaller
+        float scaleFactor = 0.7f; // Adjust this value to shrink the images
+        xSprite.setScale(scaleFactor * NEW_CELL_SIZE / xTexture.getSize().x,
+                         scaleFactor * NEW_CELL_SIZE / xTexture.getSize().y);
+        oSprite.setScale(scaleFactor * NEW_CELL_SIZE / oTexture.getSize().x,
+                         scaleFactor * NEW_CELL_SIZE / oTexture.getSize().y);
+
+        // Initialize restart button and text
+        restartButton.setSize(sf::Vector2f(150, 50));
+        restartButton.setFillColor(sf::Color::Green);
+        restartButton.setPosition(WINDOW_SIZE / 2 - 75, WINDOW_SIZE - 80);
+
+        restartButtonText.setFont(font);
+        restartButtonText.setString("Restart");
+        restartButtonText.setCharacterSize(20);
+        restartButtonText.setFillColor(sf::Color::Black);
+        restartButtonText.setPosition(WINDOW_SIZE / 2 - 50, WINDOW_SIZE - 70);
+    }
 
     void run() {
         while (window.isOpen()) {
             handleEvents();
             window.clear(sf::Color::White);
-            drawGrid();
-            drawBoard();
+            if (gameStarted) {
+                drawGrid();
+                drawBoard();
+            } else {
+                drawStartScreen();
+            }
             window.display();
         }
     }
@@ -33,14 +91,36 @@ private:
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) {
-                window.close();
-            } else if (!gameOver && event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+                window.close(); // You can keep this for when the user manually closes the window.
+            } else if (gameOver && event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+                sf::Vector2f mousePos(event.mouseButton.x, event.mouseButton.y);
+                if (restartButton.getGlobalBounds().contains(mousePos)) {
+                    resetGame();  // Reset the game when the button is clicked
+                }
+            } else if (!gameStarted && event.type == sf::Event::MouseButtonPressed) {
+                if (isStartButtonClicked(event.mouseButton.x, event.mouseButton.y)) {
+                    gameStarted = true;
+                }
+            } else if (gameStarted && !gameOver && event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
                 handleClick(event.mouseButton.x, event.mouseButton.y);
             }
         }
     }
 
+    bool isStartButtonClicked(int x, int y) {
+        sf::FloatRect startButtonBounds(WINDOW_SIZE / 2 - 100, WINDOW_SIZE / 2 - 50, 200, 100);
+        return startButtonBounds.contains(x, y);
+    }
+
+    void resetGame() {
+        board = std::vector<std::vector<Player>>(GRID_SIZE, std::vector<Player>(GRID_SIZE, Player::None));
+        currentPlayer = Player::X;
+        gameOver = false;
+    }
+
     void handleClick(int x, int y) {
+        if (gameOver) return;  // Prevent any further moves if the game is over.
+
         int row = y / CELL_SIZE;
         int col = x / CELL_SIZE;
 
@@ -57,6 +137,7 @@ private:
             }
         }
     }
+
 
     bool checkWin(int row, int col) {
         // Check row
@@ -84,42 +165,110 @@ private:
         });
     }
 
+    const float GRID_OFFSET = 100; // Space from the top of the window to center the grid
+    const float NEW_CELL_SIZE = CELL_SIZE / 1.5f; // Reduce the grid size
     void drawGrid() {
-        sf::RectangleShape line(sf::Vector2f(WINDOW_SIZE, 2));
+        sf::RectangleShape line(sf::Vector2f(GRID_SIZE * NEW_CELL_SIZE, 2));
         line.setFillColor(sf::Color::Black);
 
         for (int i = 1; i < GRID_SIZE; ++i) {
-            line.setPosition(0, i * CELL_SIZE);
+            // Horizontal lines
+            line.setPosition(GRID_OFFSET, GRID_OFFSET + i * NEW_CELL_SIZE);
             window.draw(line);
-            line.setSize(sf::Vector2f(2, WINDOW_SIZE));
-            line.setPosition(i * CELL_SIZE, 0);
+
+            // Vertical lines
+            line.setSize(sf::Vector2f(2, GRID_SIZE * NEW_CELL_SIZE));
+            line.setPosition(GRID_OFFSET + i * NEW_CELL_SIZE, GRID_OFFSET);
             window.draw(line);
-            line.setSize(sf::Vector2f(WINDOW_SIZE, 2));
+
+            line.setSize(sf::Vector2f(GRID_SIZE * NEW_CELL_SIZE, 2)); // Reset line size
         }
     }
 
     void drawBoard() {
         sf::Font font;
-        if (!font.loadFromFile("/Users/muhammadbenoun/CLionProjects/XOXO/ARIAL.TTF")) {
+        if (!font.loadFromFile("/Users/muhammadbenoun/CLionProjects/XOXO/Recourse/ARIAL.TTF")) {
             std::cerr << "Failed to load font!" << std::endl;
             return;
         }
 
-        sf::Text text;
-        text.setFont(font);
-        text.setCharacterSize(CELL_SIZE / 2);
-        text.setFillColor(sf::Color::Black);
-        text.setStyle(sf::Text::Bold);
+        sf::Text statusText;
+        statusText.setFont(font);
+        statusText.setCharacterSize(30);
+        statusText.setFillColor(sf::Color::Blue);
+        statusText.setPosition(20, 10);
+
+        if (gameOver) {
+            if (checkDraw()) {
+                statusText.setString("It's a Draw!");
+            } else {
+                statusText.setString("Player " + std::string(currentPlayer == Player::X ? "One" : "Two") + " Wins!");
+            }
+            window.draw(restartButton);
+            window.draw(restartButtonText);
+        } else {
+            statusText.setString(currentPlayer == Player::X ? "Player One's Turn (X)" : "Player Two's Turn (O)");
+        }
+
+        window.draw(statusText);
 
         for (int row = 0; row < GRID_SIZE; ++row) {
             for (int col = 0; col < GRID_SIZE; ++col) {
-                if (board[row][col] != Player::None) {
-                    text.setString(board[row][col] == Player::X ? "X" : "O");
-                    text.setPosition(col * CELL_SIZE + CELL_SIZE / 4, row * CELL_SIZE);
-                    window.draw(text);
+                if (board[row][col] == Player::X) {
+                    xSprite.setPosition(GRID_OFFSET + col * NEW_CELL_SIZE + NEW_CELL_SIZE * 0.15f,
+                                        GRID_OFFSET + row * NEW_CELL_SIZE + NEW_CELL_SIZE * 0.15f);
+                    window.draw(xSprite);
+                } else if (board[row][col] == Player::O) {
+                    oSprite.setPosition(GRID_OFFSET + col * NEW_CELL_SIZE + NEW_CELL_SIZE * 0.15f,
+                                        GRID_OFFSET + row * NEW_CELL_SIZE + NEW_CELL_SIZE * 0.15f);
+                    window.draw(oSprite);
                 }
             }
         }
+    }
+
+
+
+
+    void drawStartScreen() {
+
+        sf::Texture backgroundImg;
+        if (!backgroundImg.loadFromFile("/Users/muhammadbenoun/CLionProjects/XOXO/Recourse/spaceBackground.jpeg")) {
+            std::cerr << "Failed to load background" << std::endl;
+            return;
+        }
+
+        sf::Sprite backgroundSprite;
+        backgroundSprite.setTexture(backgroundImg);
+        window.draw(backgroundSprite);
+
+        sf::Font font;
+        if (!font.loadFromFile("/Users/muhammadbenoun/CLionProjects/XOXO/Recourse/ARIAL.TTF")) {
+            std::cerr << "Failed to load font" << std::endl;
+            return;
+        }
+
+        sf::Text title;
+        title.setFont(font);
+        title.setString("Tic-Tac-Toe");
+        title.setCharacterSize(50);
+        title.setFillColor(sf::Color::Black);
+        title.setPosition(WINDOW_SIZE / 2 - 130, WINDOW_SIZE / 4);
+
+        sf::RectangleShape button(sf::Vector2f(200, 100));
+        button.setFillColor(sf::Color::Green);
+        button.setPosition(WINDOW_SIZE / 2 - 100, WINDOW_SIZE / 2 - 50);
+
+        sf::Text buttonText;
+        buttonText.setFont(font);
+        buttonText.setString("Start Game");
+        buttonText.setCharacterSize(30);
+        buttonText.setFillColor(sf::Color::Black);
+        buttonText.setPosition(WINDOW_SIZE / 2 - 75, WINDOW_SIZE / 2 - 30);
+
+        window.draw(title);
+        window.draw(button);
+        window.draw(buttonText);
     }
 };
 
