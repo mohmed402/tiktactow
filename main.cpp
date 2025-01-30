@@ -40,14 +40,17 @@ public:
         // Load textures and font in the constructor
         if (!xTexture.loadFromFile("/Users/muhammadbenoun/CLionProjects/XOXO/Recourse/xIcon.png")) {
             std::cerr << "Failed to load X image!" << std::endl;
+            exit(1);
         }
         if (!oTexture.loadFromFile("/Users/muhammadbenoun/CLionProjects/XOXO/Recourse/oIcon.png")) {
             std::cerr << "Failed to load O image!" << std::endl;
+            exit(1);
         }
 
         sf::Font font;
         if (!font.loadFromFile("/Users/muhammadbenoun/CLionProjects/XOXO/Recourse/ARIAL.TTF")) {
             std::cerr << "Failed to load font!" << std::endl;
+            exit(1);
         }
 
         xSprite.setTexture(xTexture);
@@ -92,18 +95,21 @@ private:
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) {
                 window.close(); // You can keep this for when the user manually closes the window.
-            } else if (gameOver && event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+            }else if (gameOver && event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
                 sf::Vector2f mousePos(event.mouseButton.x, event.mouseButton.y);
                 if (restartButton.getGlobalBounds().contains(mousePos)) {
-                    resetGame();  // Reset the game when the button is clicked
+                    resetGame();
                 }
-            } else if (!gameStarted && event.type == sf::Event::MouseButtonPressed) {
+            }
+
+            else if (!gameStarted && event.type == sf::Event::MouseButtonPressed) {
                 if (isStartButtonClicked(event.mouseButton.x, event.mouseButton.y)) {
                     gameStarted = true;
                 }
-            } else if (gameStarted && !gameOver && event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+            }else if (gameStarted && !gameOver && event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
                 handleClick(event.mouseButton.x, event.mouseButton.y);
             }
+
         }
     }
 
@@ -113,6 +119,7 @@ private:
     }
 
     void resetGame() {
+        std::cout << "Game Reset!" << std::endl;
         board = std::vector<std::vector<Player>>(GRID_SIZE, std::vector<Player>(GRID_SIZE, Player::None));
         currentPlayer = Player::X;
         gameOver = false;
